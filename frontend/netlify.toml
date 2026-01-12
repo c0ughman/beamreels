@@ -1,0 +1,28 @@
+[build]
+  publish = "."
+  command = "echo 'No build step needed for static site'"
+
+[[redirects]]
+  from = "/"
+  to = "/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/creator"
+  to = "/creator.html"
+  status = 200
+
+# API proxy - forward API requests to Railway backend
+[[redirects]]
+  from = "/api/*"
+  to = "https://your-railway-backend-url.railway.app/api/:splat"
+  status = 200
+  force = true
+
+# Media files proxy
+[[redirects]]
+  from = "/media/*"
+  to = "https://your-railway-backend-url.railway.app/media/:splat"
+  status = 200
+  force = true
+

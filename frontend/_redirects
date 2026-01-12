@@ -1,0 +1,6 @@
+# Netlify redirects file (fallback if netlify.toml doesn't work)
+/ /index.html 200
+/creator /creator.html 200
+/api/* https://your-railway-backend-url.railway.app/api/:splat 200
+/media/* https://your-railway-backend-url.railway.app/media/:splat 200
+

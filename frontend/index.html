@@ -1,0 +1,1075 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beamreels – Creator</title>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #fbfbfd;
+            --bg-alt: #f5f5f7;
+            --text-main: #1d1d1f;
+            --text-subtle: #6e6e73;
+            --link: #0071e3;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        /* Shell */
+        .page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            backdrop-filter: blur(20px);
+            background: rgba(251, 251, 253, 0.88);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .nav-inner {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+        .nav-logo {
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            color: #424245;
+        }
+
+        .nav-links a {
+            padding-bottom: 2px;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-main);
+        }
+
+        main {
+            flex: 1;
+        }
+
+        .section-shell {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 72px 20px;
+        }
+
+        /* Section 1 – Hero */
+        .hero {
+            text-align: center;
+            padding-top: 80px;
+            padding-bottom: 80px;
+        }
+
+        .hero-kicker {
+            font-size: 14px;
+            color: var(--text-subtle);
+            margin-bottom: 16px;
+        }
+
+        .hero-title {
+            font-size: clamp(40px, 6vw, 64px);
+            font-weight: 600;
+            letter-spacing: -0.04em;
+            margin-bottom: 12px;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            color: var(--text-subtle);
+            max-width: 520px;
+            margin: 0 auto 28px;
+            line-height: 1.4;
+        }
+
+        .hero-cta {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .hero-cta-primary,
+        .hero-cta-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero-cta-primary {
+            font-size: 17px;
+            padding: 10px 26px;
+            border-radius: 999px;
+            background: var(--link);
+            color: #fff;
+        }
+
+        .hero-cta-secondary {
+            font-size: 17px;
+            color: var(--link);
+            padding: 10px 18px;
+        }
+
+        .hero-footnote {
+            font-size: 12px;
+            color: var(--text-subtle);
+        }
+
+        /* Hero image arc */
+        .hero-arc {
+            margin-top: 48px;
+            display: flex;
+            justify-content: center;
+            gap: 22px;
+            padding-bottom: 40px;
+        }
+
+        .hero-arc-item {
+            width: 120px;
+            aspect-ratio: 9 / 16;
+            border-radius: 18px;
+            box-shadow:
+                0 10px 25px rgba(0, 0, 0, 0.12),
+                0 0 0 0.5px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            transform-origin: 50% 0;
+            transition: transform 0.1s ease-out;
+        }
+
+        .hero-arc-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Position the seven tiles in a soft semicircle */
+        .hero-arc-item:nth-child(1) {
+            transform: translateY(-20px) rotate(-14deg);
+        }
+
+        .hero-arc-item:nth-child(2) {
+            transform: translateY(4px) rotate(-8deg);
+        }
+
+        .hero-arc-item:nth-child(3) {
+            transform: translateY(26px) rotate(-3deg);
+        }
+
+        .hero-arc-item:nth-child(4) {
+            transform: translateY(40px);
+        }
+
+        .hero-arc-item:nth-child(5) {
+            transform: translateY(26px) rotate(3deg);
+        }
+
+        .hero-arc-item:nth-child(6) {
+            transform: translateY(4px) rotate(8deg);
+        }
+
+        .hero-arc-item:nth-child(7) {
+            transform: translateY(-20px) rotate(14deg);
+        }
+
+        /* Hero demo video section */
+        .hero-demo-section {
+            margin-top: -200px;
+        }
+
+        .hero-demo-shell {
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 0 20px 84px;
+            transform: translateY(180px);
+            will-change: transform;
+        }
+
+        .hero-demo-frame {
+            border-radius: 40px;
+            background: rgba(0, 0, 0, 0.04);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            backdrop-filter: blur(22px);
+            padding: 28px;
+        }
+
+        .hero-demo-inner {
+            border-radius: 28px;
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hero-demo-placeholder {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at top left, #f5f5f7, #d2d2d7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6e6e73;
+            font-size: 14px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        /* Section 2 – Simple product band */
+        .band-muted {
+            background: var(--bg-alt);
+        }
+
+        .product-band {
+            display: grid;
+            grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+            align-items: center;
+            gap: 40px;
+        }
+
+        .product-copy-eyebrow {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: var(--text-subtle);
+            margin-bottom: 10px;
+        }
+
+        .product-copy-title {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            margin-bottom: 14px;
+        }
+
+        .product-copy-body {
+            font-size: 16px;
+            color: var(--text-subtle);
+            line-height: 1.55;
+        }
+
+        .product-panel {
+            border-radius: 28px;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            background: #ffffff;
+            padding: 24px 22px;
+            text-align: left;
+        }
+
+        .product-panel-label {
+            font-size: 13px;
+            color: var(--text-subtle);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+        }
+
+        .product-panel-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .product-panel-meta {
+            font-size: 13px;
+            color: var(--text-subtle);
+            margin-bottom: 18px;
+        }
+
+        .video-flow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 12px;
+        }
+
+        .video-node {
+            flex: 1;
+            min-width: 0;
+            padding: 10px 12px;
+            border-radius: 999px;
+            background: #f5f5f7;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .video-node-label {
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-size: 10px;
+            color: var(--text-subtle);
+        }
+
+        .video-node-main {
+            font-size: 13px;
+        }
+
+        .video-arrow {
+            width: 20px;
+            text-align: center;
+            color: var(--text-subtle);
+        }
+
+        /* Section 3 – Key points (three columns) */
+        .section-heading-center {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .section-eyebrow {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: var(--text-subtle);
+            margin-bottom: 6px;
+        }
+
+        .section-title {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            margin-bottom: 8px;
+        }
+
+        .section-subtitle {
+            font-size: 16px;
+            color: var(--text-subtle);
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 28px;
+        }
+
+        .point-card {
+            text-align: left;
+        }
+
+        .point-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .point-body {
+            font-size: 14px;
+            color: var(--text-subtle);
+            line-height: 1.6;
+        }
+
+        /* Bento section */
+        .bento {
+            display: grid;
+            grid-template-columns: 2fr 1.5fr;
+            gap: 18px;
+        }
+
+        .bento-col {
+            display: grid;
+            gap: 18px;
+        }
+
+        .bento-card {
+            border-radius: 24px;
+            background: #ffffff;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            backdrop-filter: blur(70px);
+            padding: 22px 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+
+        .bento-card-hero {
+            padding: 28px 24px;
+        }
+
+        .bento-eyebrow {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: var(--text-subtle);
+            margin-bottom: 6px;
+        }
+
+        .bento-title {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            margin-bottom: 6px;
+        }
+
+        .bento-body {
+            font-size: 14px;
+            color: var(--text-subtle);
+            line-height: 1.6;
+        }
+
+        .bento-meta {
+            font-size: 12px;
+            color: var(--text-subtle);
+            margin-top: 10px;
+        }
+
+        /* Image stack hover animation */
+        .image-stack-container {
+            cursor: pointer;
+        }
+
+        .image-stack-container:hover .stack-image-back-left {
+            transform: translateX(-20px) translateY(-5px) rotate(-12deg) scale(0.95);
+            opacity: 0.8;
+        }
+
+        .image-stack-container:hover .stack-image-back-right {
+            transform: translateX(20px) translateY(-5px) rotate(12deg) scale(0.95);
+            opacity: 0.8;
+        }
+
+        .image-stack-container:hover .stack-image-front {
+            transform: translateY(-8px) scale(1.02);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Wide image section */
+        .wide-image-section {
+            width: 100%;
+            margin: -50px 0 -25px 0;
+            padding: 20px 50px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        .wide-image-container {
+            width: 100%;
+            max-height: none;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .wide-image {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            display: block;
+        }
+
+        /* Section 4 – Simple story band */
+        .story-band {
+            text-align: center;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        .story-kicker {
+            font-size: 14px;
+            color: var(--text-subtle);
+            margin-bottom: 16px;
+        }
+
+        .story-title {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            margin-bottom: 14px;
+        }
+
+        .story-body {
+            font-size: 16px;
+            color: var(--text-subtle);
+            line-height: 1.6;
+        }
+
+        /* Section 5 – Closing CTA */
+        .closing {
+            text-align: center;
+            padding-top: 60px;
+            padding-bottom: 80px;
+        }
+
+        .closing-title {
+            font-size: 34px;
+            font-weight: 600;
+            letter-spacing: -0.04em;
+            margin-bottom: 10px;
+        }
+
+        .closing-subtitle {
+            font-size: 16px;
+            color: var(--text-subtle);
+            margin-bottom: 28px;
+        }
+
+        .closing-cta {
+            font-size: 17px;
+            color: var(--link);
+        }
+
+        /* Footer CTA */
+        footer {
+            background: var(--bg-alt);
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+            padding: 0;
+        }
+
+        .footer-cta-section {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 40px 20px 30px;
+            text-align: center;
+        }
+
+        .footer-cta-title {
+            font-size: clamp(32px, 5vw, 48px);
+            font-weight: 600;
+            letter-spacing: -0.04em;
+            margin-bottom: 16px;
+            line-height: 1.2;
+        }
+
+        .footer-cta-subtitle {
+            font-size: 20px;
+            color: var(--text-subtle);
+            max-width: 600px;
+            margin: 0 auto 32px;
+            line-height: 1.5;
+        }
+
+        .footer-cta-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 17px;
+            font-weight: 500;
+            padding: 14px 32px;
+            border-radius: 999px;
+            background: var(--link);
+            color: #ffffff;
+            transition: all 0.2s ease;
+            text-decoration: none;
+        }
+
+        .footer-cta-button:hover {
+            background: #0077ED;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+        }
+
+        .footer-cta-button:active {
+            transform: translateY(0);
+        }
+
+        .footer-bottom {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 20px 20px;
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            justify-content: center;
+            font-size: 13px;
+            color: var(--text-subtle);
+        }
+
+        .footer-links a {
+            color: var(--text-subtle);
+            transition: color 0.2s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--text-main);
+        }
+
+        .footer-copyright {
+            font-size: 12px;
+            color: var(--text-subtle);
+            text-align: center;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .product-band {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .bento {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .section-shell {
+                padding: 56px 16px;
+            }
+
+            .hero {
+                padding-top: 64px;
+                padding-bottom: 64px;
+            }
+
+            .grid-3 {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .nav-links {
+                display: none;
+            }
+
+            .wide-image-section {
+                padding: 20px 16px;
+            }
+
+            .wide-image-container {
+                max-height: none;
+            }
+
+            .footer-cta-section {
+                padding: 30px 20px 24px;
+            }
+
+            .footer-cta-title {
+                font-size: 28px;
+            }
+
+            .footer-cta-subtitle {
+                font-size: 18px;
+            }
+
+            .footer-bottom {
+                padding: 16px 20px;
+            }
+
+            .footer-links {
+                flex-direction: column;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <header class="nav">
+            <div class="nav-inner">
+                <div class="nav-logo">Beampage</div>
+                <nav class="nav-links">
+                    <a href="#overview">Overview</a>
+                    <a href="#why">Why Creator</a>
+                    <a href="/creator">Open Creator</a>
+                </nav>
+            </div>
+        </header>
+
+        <main>
+            <!-- Section 1: Hero -->
+            <section class="section-shell hero">
+                <h1 class="hero-title">Copy any video.<br>Recreate it infinitely.</h1>
+                <p class="hero-subtitle">
+                    Paste a competitor's link and get the exact template to duplicate their winning content with AI—limitless variations, zero guesswork.
+                </p>
+                <div class="hero-cta">
+                    <a href="#overview" class="hero-cta-primary">Get Started</a>
+                    <a href="/creator" class="hero-cta-secondary">Try Creator →</a>
+                </div>
+                <div class="hero-arc" aria-hidden="true">
+                    <div class="hero-arc-item"><img src="images/one.png" alt=""></div>
+                    <div class="hero-arc-item"><img src="images/five.png" alt=""></div>
+                    <div class="hero-arc-item"><img src="images/seven.png" alt=""></div>
+                    <div class="hero-arc-item"><img src="images/nine.png" alt=""></div>
+                    <div class="hero-arc-item"><img src="images/eleven.png" alt=""></div>
+                    <div class="hero-arc-item"><img src="images/two.png" alt=""></div>
+                    <div class="hero-arc-item"><img src="images/six.png" alt=""></div>
+                </div>
+            </section>
+
+            <!-- Hero demo video placeholder -->
+            <section class="hero-demo-section">
+                <div class="hero-demo-shell">
+                    <div class="hero-demo-frame">
+                        <div class="hero-demo-inner">
+                            <div class="hero-demo-placeholder">
+                                Demo video placeholder
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: CTA – link in, template out -->
+            <section class="band-muted" style="margin-top: -100px; background: #ffffff;">
+                <div class="section-shell">
+                    <div id="overview" class="product-band">
+                        <div>
+                            <h2 class="product-copy-title" style="font-size: 40px; margin-bottom: 16px;">Paste a link.<br>Get the template.</h2>
+                            <p class="product-copy-body" style="margin-bottom: 32px;">
+                                Drop in any competitor video. We'll give you the exact template to recreate it limitlessly.
+                            </p>
+
+                            <div style="background: #ffffff; border-radius: 18px; padding: 28px; border: 1px solid rgba(0, 0, 0, 0.06);">
+                                <div style="display: flex; gap: 10px; margin-bottom: 18px;">
+                                    <input
+                                        type="text"
+                                        placeholder="https://..."
+                                        style="flex: 1; padding: 14px 18px; border-radius: 16px; border: 1px solid rgba(0, 0, 0, 0.1); background: #f5f5f7; font-size: 17px; font-family: inherit; outline: none; transition: all 0.2s;"
+                                        onfocus="this.style.borderColor='#0071e3'; this.style.background='#ffffff'"
+                                        onblur="this.style.borderColor='rgba(0, 0, 0, 0.1)'; this.style.background='#f5f5f7'"
+                                    >
+                                    <button style="padding: 10px 26px; border-radius: 999px; background: #0071e3; color: #ffffff; border: none; font-size: 17px; cursor: pointer; white-space: nowrap; font-family: inherit; transition: background-color 0.2s;"
+                                        onmouseover="this.style.backgroundColor='#0077ED'"
+                                        onmouseout="this.style.backgroundColor='#0071e3'"
+                                    >Get Template</button>
+                                </div>
+
+                                <div style="display: flex; align-items: center; gap: 16px;">
+                                    <!-- TikTok Logo -->
+                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #ffffff; display: flex; align-items: center; justify-content: center; padding: 6px; border: 1px solid rgba(0, 0, 0, 0.06);">
+                                        <img src="logos/tiktok.png" alt="TikTok" style="width: 80%; height: 80%; object-fit: contain;">
+                                    </div>
+                                    <!-- Instagram Logo -->
+                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #ffffff; display: flex; align-items: center; justify-content: center; padding: 6px; border: 1px solid rgba(0, 0, 0, 0.06);">
+                                        <img src="logos/instagram.png" alt="Instagram" style="width: 80%; height: 80%; object-fit: contain;">
+                                    </div>
+                                    <!-- YouTube Logo -->
+                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #ffffff; display: flex; align-items: center; justify-content: center; padding: 6px; border: 1px solid rgba(0, 0, 0, 0.06);">
+                                        <img src="logos/youtube.webp" alt="YouTube" style="width: 100%; height: 100%; object-fit: contain;">
+                                    </div>
+                                    <!-- Facebook Logo -->
+                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #ffffff; display: flex; align-items: center; justify-content: center; padding: 6px; border: 1px solid rgba(0, 0, 0, 0.06);">
+                                        <img src="logos/facebook.webp" alt="Facebook" style="width: 100%; height: 100%; object-fit: contain;">
+                                    </div>
+                                    <!-- Upload Icon -->
+                                    <div style="width: 36px; height: 36px; border-radius: 50%; background: #ffffff; display: flex; align-items: center; justify-content: center; padding: 6px; border: 1px solid rgba(0, 0, 0, 0.06);">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #6e6e73;">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: center; position: relative; min-height: 400px;">
+                            <div style="position: absolute; width: 200px; aspect-ratio: 9/16; border-radius: 18px; border: 1px solid rgba(0, 0, 0, 0.08); overflow: hidden; transform: translateX(12px) translateY(16px) rotate(6deg); z-index: 1; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);">
+                                <img src="three.png" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                            </div>
+                            <div style="position: absolute; width: 200px; aspect-ratio: 9/16; border-radius: 18px; border: 1px solid rgba(0, 0, 0, 0.08); overflow: hidden; transform: translateX(6px) translateY(8px) rotate(3deg); z-index: 2; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);">
+                                <img src="eight.png" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                            </div>
+                            <div style="position: relative; width: 200px; aspect-ratio: 9/16; border-radius: 18px; border: 1px solid rgba(0, 0, 0, 0.08); overflow: hidden; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12); z-index: 3;">
+                                <img src="ten.png" alt="" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: Bento section -->
+            <section class="section-shell">
+                <div class="section-heading-center" style="margin-bottom: 48px;">
+                    <h2 class="section-title">Everything you need to scale content.</h2>
+                    <p class="section-subtitle">One platform. Unlimited variations.</p>
+                </div>
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+                    <!-- Left Column -->
+                    <div style="display: grid; grid-template-rows: auto 1fr; gap: 20px;">
+                        <!-- Large card - top of left column -->
+                        <div class="bento-card" style="padding: 36px; min-height: 320px; display: flex; flex-direction: column;">
+                            <h3 class="bento-title" style="font-size: 26px; max-width: 420px;">Instant template extraction from any video.</h3>
+                            <p class="bento-body" style="max-width: 440px; margin-bottom: auto;">
+                                Paste any competitor link and our AI analyzes the structure, pacing, hooks, and calls-to-action. Get a ready-to-use template in seconds.
+                            </p>
+                            <div style="margin-top: 32px;">
+                                <img src="video-track.png" alt="Video track" style="width: 100%; height: auto; display: block;">
+                            </div>
+                        </div>
+
+                        <!-- Bottom row of left column - two cards side by side -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                            <!-- Bottom left card -->
+                            <div class="bento-card" style="padding: 32px; display: flex; flex-direction: column; background: radial-gradient(circle at bottom left, rgba(150, 100, 255, 0) 0%, rgba(180, 130, 255, 0.15) 15%, rgba(255, 170, 200, 0.14) 30%, rgba(255, 200, 220, 0.11) 45%, rgba(220, 180, 255, 0.09) 60%, rgba(240, 220, 255, 0.06) 75%, rgba(250, 240, 255, 0.03) 90%, #ffffff 100%);">
+                                <h3 class="bento-title" style="font-size: 22px; margin-bottom: 12px;">AI-powered analysis.</h3>
+                                <p class="bento-body" style="margin-bottom: 24px;">
+                                    Our AI dissects every winning video—hooks, pacing, structure, and CTAs. Understand what makes content perform before you create.
+                                </p>
+                                <div style="margin-top: auto; display: flex; align-items: center; gap: 8px; padding: 12px; background: #f5f5f7; border-radius: 10px;">
+                                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #6e6e73; animation: pulse 2s infinite;"></div>
+                                    <span style="font-size: 13px; color: var(--text-subtle);">Real-time analysis</span>
+                                </div>
+                            </div>
+
+                            <!-- Bottom middle card -->
+                            <div class="bento-card" style="padding: 32px; display: flex; flex-direction: column; background: radial-gradient(circle at top right, rgba(255, 150, 100, 0) 0%, rgba(255, 180, 130, 0.15) 15%, rgba(100, 200, 255, 0.14) 30%, rgba(130, 220, 255, 0.11) 45%, rgba(255, 220, 200, 0.09) 60%, rgba(255, 240, 230, 0.06) 75%, rgba(255, 250, 245, 0.03) 90%, #ffffff 100%);">
+                                <h3 class="bento-title" style="font-size: 22px; margin-bottom: 12px;">Copy what wins.</h3>
+                                <p class="bento-body" style="margin-bottom: 24px;">
+                                    Stop guessing what works. Extract proven templates from top-performing videos and replicate their success with infinite variations.
+                                </p>
+                                <div style="margin-top: auto; display: flex; gap: 6px; align-items: center;">
+                                    <div style="flex: 1; height: 4px; border-radius: 2px; background: #e8e8ed;"></div>
+                                    <div style="flex: 1; height: 4px; border-radius: 2px; background: #6e6e73;"></div>
+                                    <div style="flex: 1; height: 4px; border-radius: 2px; background: #e8e8ed;"></div>
+                                    <span style="font-size: 12px; color: var(--text-subtle); margin-left: 8px;">Proven</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column -->
+                    <div style="display: grid; grid-template-rows: auto 1fr; gap: 20px;">
+                        <!-- Top right card -->
+                        <div class="bento-card" style="padding: 32px; display: flex; flex-direction: column; background: radial-gradient(circle at bottom right, rgba(100, 255, 200, 0) 0%, rgba(130, 255, 220, 0.15) 15%, rgba(255, 120, 180, 0.14) 30%, rgba(255, 150, 200, 0.11) 45%, rgba(200, 255, 240, 0.09) 60%, rgba(230, 255, 250, 0.06) 75%, rgba(245, 255, 252, 0.03) 90%, #ffffff 100%);">
+                            <h3 class="bento-title" style="font-size: 22px; margin-bottom: 12px;">Scale without limits.</h3>
+                            <p class="bento-body" style="margin-bottom: 24px;">
+                                Generate unlimited variations from a single template. Same winning structure, endless angles—ship more content, faster than ever.
+                            </p>
+                            <div style="margin-top: auto; display: flex; align-items: center; gap: 12px;">
+                                <div style="flex: 1; text-align: center;">
+                                    <div style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #1d1d1f; line-height: 1;">∞</div>
+                                    <div style="font-size: 11px; color: var(--text-subtle); margin-top: 4px;">Variations</div>
+                                </div>
+                                <div style="width: 1px; height: 32px; background: rgba(0, 0, 0, 0.1);"></div>
+                                <div style="flex: 1; text-align: center;">
+                                    <div style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em; color: #1d1d1f; line-height: 1;">10x</div>
+                                    <div style="font-size: 11px; color: var(--text-subtle); margin-top: 4px;">Faster</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom right card with images -->
+                        <div class="bento-card" style="padding: 32px; display: flex; flex-direction: column;">
+                            <h3 class="bento-title" style="font-size: 22px;">Unlimited variations.</h3>
+                            <p class="bento-body" style="margin-bottom: 28px;">
+                                Create infinite versions from one source. Same structure, different angles.
+                            </p>
+                            <div class="image-stack-container" style="margin-top: auto; display: flex; flex-direction: column; gap: 10px; align-items: center; position: relative; flex: 1; min-height: 0;">
+                                <div class="image-stack" style="position: relative; width: 156px; flex: 1; min-height: 200px; display: flex; align-items: stretch; justify-content: center;">
+                                    <img src="four.png" alt="" class="stack-image stack-image-back-left" style="position: absolute; width: 156px; height: 100%; border-radius: 14px; object-fit: cover; display: block; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 1;">
+                                    <img src="five.png" alt="" class="stack-image stack-image-back-right" style="position: absolute; width: 156px; height: 100%; border-radius: 14px; object-fit: cover; display: block; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2;">
+                                    <img src="six.png" alt="" class="stack-image stack-image-front" style="position: relative; width: 156px; height: 100%; border-radius: 14px; object-fit: cover; display: block; transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); z-index: 3;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: Key points -->
+            <section style="background: #ffffff; width: 100%; padding: 72px 20px;">
+                <div style="max-width: 980px; margin: 0 auto;">
+                    <div id="why" class="section-heading-center">
+                        <p class="section-eyebrow">Why Creator</p>
+                        <h2 class="section-title">Built for clear, fast output.</h2>
+                        <p class="section-subtitle">Three things that stay true across every video you ship.</p>
+                    </div>
+                    <div class="grid-3">
+                        <div class="point-card">
+                            <h3 class="point-title">Consistent layout</h3>
+                            <p class="point-body">
+                                Lock in a structure once—intro, story, call to action—and keep every variant aligned to it.
+                            </p>
+                        </div>
+                        <div class="point-card">
+                            <h3 class="point-title">Simple controls</h3>
+                            <p class="point-body">
+                                Adjust copy and visuals without digging through a complex timeline or multiple tools.
+                            </p>
+                        </div>
+                        <div class="point-card">
+                            <h3 class="point-title">Ready to scale</h3>
+                            <p class="point-body">
+                                Duplicate what works into more formats and versions, instead of rebuilding from scratch.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Wide image section -->
+            <section class="wide-image-section">
+                <div class="wide-image-container">
+                    <img src="dataset.png" alt="Dataset" class="wide-image">
+                </div>
+            </section>
+
+        </main>
+
+        <footer>
+            <div class="footer-cta-section">
+                <h2 class="footer-cta-title">Stop guessing what works.<br>Start copying what wins.</h2>
+                <p class="footer-cta-subtitle">
+                    Join creators who are scaling content faster by extracting winning templates from any video. No more trial and error—just proven structures, infinite variations.
+                </p>
+                <a href="/creator" class="footer-cta-button">
+                    Get Started Free
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </a>
+            </div>
+            <div class="footer-bottom">
+                <div class="footer-copyright">
+                    © 2025 Beampage. All rights reserved.
+                </div>
+            </div>
+        </footer>
+    </div>
+</body>
+<script>
+    (function() {
+        const demoShell = document.querySelector('.hero-demo-shell');
+        if (!demoShell) return;
+
+        let ticking = false;
+        const maxOffset = 180;   // matches initial translateY in CSS
+        const factor = 0.4;      // slower movement toward the user
+        const minOffset = -320;  // allow it to settle even higher on the page
+
+        function update() {
+            const scrollY = window.scrollY || window.pageYOffset || 0;
+            let offset = maxOffset - scrollY * factor;
+            if (offset < minOffset) offset = minOffset;
+            demoShell.style.transform = 'translateY(' + offset + 'px)';
+            ticking = false;
+        }
+
+        function onScroll() {
+            if (!ticking) {
+                window.requestAnimationFrame(update);
+                ticking = true;
+            }
+        }
+
+        update();
+        window.addEventListener('scroll', onScroll, { passive: true });
+    })();
+
+    // Hero arc rotation on scroll
+    (function() {
+        const arcItems = document.querySelectorAll('.hero-arc-item');
+        if (!arcItems.length) return;
+
+        // Base rotations (current CSS values)
+        const baseRotations = [-14, -8, -3, 0, 3, 8, 14];
+        const maxScroll = 400; // Scroll distance to reach max rotation
+        const maxRotationIncrease = 0.6; // Increase rotation by up to 60% (reduced rotation)
+        const maxSpread = 100; // Maximum horizontal spread in pixels (between 80px and 120px)
+        const maxUpwardMovement = 100; // Maximum upward movement in pixels
+
+        // Different upward movement speeds for each image (multipliers)
+        const upwardSpeeds = [0.8, 1.2, 0.6, 1.0, 0.9, 1.1, 0.7]; // Varying speeds for organic feel
+
+        let ticking = false;
+
+        function updateArcRotation() {
+            const scrollY = window.scrollY || window.pageYOffset || 0;
+            const scrollProgress = Math.min(scrollY / maxScroll, 1); // 0 to 1
+            const rotationFactor = 1 + (scrollProgress * maxRotationIncrease); // 1 to 1.85
+
+            arcItems.forEach((item, index) => {
+                const baseRot = baseRotations[index];
+                const newRot = baseRot * rotationFactor;
+                
+                // Get the current base translateY from the CSS
+                let baseTranslateY = 0;
+                if (index === 0 || index === 6) baseTranslateY = -20;
+                else if (index === 1 || index === 5) baseTranslateY = 4;
+                else if (index === 2 || index === 4) baseTranslateY = 26;
+                else if (index === 3) baseTranslateY = 40;
+
+                // Calculate upward movement - each image moves at different speed
+                const upwardMovement = -scrollProgress * maxUpwardMovement * upwardSpeeds[index];
+                const translateY = baseTranslateY + upwardMovement;
+
+                // Calculate horizontal spread - each image moves at different rate
+                // Left images (0, 1, 2) move left, right images (4, 5, 6) move right, center (3) stays
+                let translateX = 0;
+                if (index === 0) translateX = -scrollProgress * maxSpread * 1.0;      // Leftmost: full spread left
+                else if (index === 1) translateX = -scrollProgress * maxSpread * 0.6;  // Left: 60% spread left
+                else if (index === 2) translateX = -scrollProgress * maxSpread * 0.3;   // Left: 30% spread left
+                else if (index === 3) translateX = 0;                                   // Center: no movement
+                else if (index === 4) translateX = scrollProgress * maxSpread * 0.3;     // Right: 30% spread right
+                else if (index === 5) translateX = scrollProgress * maxSpread * 0.6;     // Right: 60% spread right
+                else if (index === 6) translateX = scrollProgress * maxSpread * 1.0;    // Rightmost: full spread right
+
+                item.style.transform = `translateX(${translateX}px) translateY(${translateY}px) rotate(${newRot}deg)`;
+            });
+
+            ticking = false;
+        }
+
+        function onScroll() {
+            if (!ticking) {
+                window.requestAnimationFrame(updateArcRotation);
+                ticking = true;
+            }
+        }
+
+        updateArcRotation();
+        window.addEventListener('scroll', onScroll, { passive: true });
+    })();
+</script>
+</html>
