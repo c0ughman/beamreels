@@ -4,6 +4,46 @@
             box-sizing: border-box;
         }
 
+        .creator-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 1000;
+        }
+
+        .creator-nav-back {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #0071e3;
+            text-decoration: none;
+            transition: opacity 0.15s ease;
+        }
+
+        .creator-nav-back:hover {
+            opacity: 0.7;
+        }
+
+        .creator-nav-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1d1d1f;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
         html {
             overscroll-behavior-x: none;
             overscroll-behavior-y: auto;
@@ -21,6 +61,7 @@
             overscroll-behavior-y: none;
             -webkit-font-smoothing: antialiased;
             position: relative;
+            padding-top: 48px;
         }
 
         /* Faster horizontal scroll */
