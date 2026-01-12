@@ -15,7 +15,6 @@ COPY . .
 
 RUN python manage.py collectstatic --noinput
 
-ENV PORT=8000
 EXPOSE 8000
 
-CMD gunicorn beamreels.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+CMD ["/bin/sh", "-c", "gunicorn beamreels.wsgi:application --bind 0.0.0.0:${PORT:-8000} --workers 2 --timeout 120"]
