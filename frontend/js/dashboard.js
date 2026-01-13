@@ -19,14 +19,22 @@
     }
 
     async function getAllTemplates() {
-        const response = await fetch(`${window.API_BASE_URL}/api/templates/?device_id=${deviceId}`);
-        const result = await response.json();
-
-        if (result.error) {
-            console.error('Error fetching templates:', result.error);
+        try {
+            const response = await fetch(`${window.API_BASE_URL}/api/templates/?device_id=${deviceId}`);
+            if (!response.ok) {
+                console.error('Error fetching templates: HTTP', response.status);
+                return [];
+            }
+            const result = await response.json();
+            if (result.error) {
+                console.error('Error fetching templates:', result.error);
+                return [];
+            }
+            return result.data || [];
+        } catch (err) {
+            console.error('Failed to connect to backend:', err.message);
             return [];
         }
-        return result.data || [];
     }
 
     async function saveTemplate(template) {
