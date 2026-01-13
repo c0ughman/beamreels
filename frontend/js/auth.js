@@ -31,8 +31,13 @@ async function initClerk() {
 
     try {
         await loadClerkScript();
-        clerkInstance = new window.Clerk(CLERK_PUBLISHABLE_KEY);
-        await clerkInstance.load();
+        if (!window.Clerk) {
+            throw new Error('Clerk SDK failed to load');
+        }
+        clerkInstance = window.Clerk;
+        await clerkInstance.load({
+            publishableKey: CLERK_PUBLISHABLE_KEY
+        });
         isClerkLoaded = true;
         return clerkInstance;
     } catch (err) {
