@@ -8,6 +8,7 @@ from django.views.decorators.http import require_http_methods
 from .video_export_service import VideoExportService
 from .gemini_multi_stage_analyzer import GeminiMultiStageAnalyzer
 from .models import Template, MediaLibrary
+from .clerk_auth import clerk_auth_required, clerk_auth_optional
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ def creator_page(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@clerk_auth_required
 def creator_export_video(request):
     try:
         data = json.loads(request.body)
@@ -33,7 +35,7 @@ def creator_export_video(request):
 
         video_count = min(max(1, video_count), 10)
 
-        logger.info(f"Starting video export: {video_count} video(s)")
+        logger.info(f"Starting video export: {video_count} video(s) for user {request.clerk_user_id}")
         logger.info(f"Timeline data: {timeline_data}")
 
         for i, element in enumerate(timeline_data.get('elements', [])):
@@ -69,6 +71,7 @@ def creator_export_video(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@clerk_auth_required
 def creator_import_video(request):
     try:
         video_file = request.FILES.get('video')
@@ -108,61 +111,49 @@ def creator_import_video(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-@csrf_exempt
-@require_http_methods(["GET"])
-def get_templates(request):
-    device_id = request.GET.get('device_id')
-    if not device_id:
-        return JsonResponse({'error': 'device_id is required'}, status=400)
-
-    templates = Template.objects.filter(device_id=device_id).order_by('-updated_at')
-    data = [{
+def serialize_template(t):
+    return {
         'id': str(t.id),
-        'device_id': t.device_id,
+        'user_id': t.user_id,
         'name': t.name,
         'thumbnail': t.thumbnail,
         'timeline_data': t.timeline_data,
         'exports_count': t.exports_count,
         'created_at': t.created_at.isoformat(),
         'updated_at': t.updated_at.isoformat()
-    } for t in templates]
+    }
 
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@clerk_auth_required
+def get_templates(request):
+    user_id = request.clerk_user_id
+    templates = Template.objects.filter(user_id=user_id).order_by('-updated_at')
+    data = [serialize_template(t) for t in templates]
     return JsonResponse({'data': data})
 
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@clerk_auth_required
 def get_template(request, template_id):
-    device_id = request.GET.get('device_id')
-    if not device_id:
-        return JsonResponse({'error': 'device_id is required'}, status=400)
+    user_id = request.clerk_user_id
 
     try:
-        template = Template.objects.get(id=template_id, device_id=device_id)
-        return JsonResponse({
-            'data': {
-                'id': str(template.id),
-                'device_id': template.device_id,
-                'name': template.name,
-                'thumbnail': template.thumbnail,
-                'timeline_data': template.timeline_data,
-                'exports_count': template.exports_count,
-                'created_at': template.created_at.isoformat(),
-                'updated_at': template.updated_at.isoformat()
-            }
-        })
+        template = Template.objects.get(id=template_id, user_id=user_id)
+        return JsonResponse({'data': serialize_template(template)})
     except Template.DoesNotExist:
         return JsonResponse({'data': None})
 
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@clerk_auth_required
 def create_template(request):
     try:
+        user_id = request.clerk_user_id
         data = json.loads(request.body)
-        device_id = data.get('device_id')
-        if not device_id:
-            return JsonResponse({'error': 'device_id is required'}, status=400)
 
         template_id = data.get('id')
         if template_id:
@@ -175,25 +166,14 @@ def create_template(request):
 
         template = Template.objects.create(
             id=template_id,
-            device_id=device_id,
+            user_id=user_id,
             name=data.get('name', 'Untitled Template'),
             thumbnail=data.get('thumbnail'),
             timeline_data=data.get('timeline_data', {'elements': [], 'overlays': [], 'variablePools': {}}),
             exports_count=data.get('exports_count', 0)
         )
 
-        return JsonResponse({
-            'data': {
-                'id': str(template.id),
-                'device_id': template.device_id,
-                'name': template.name,
-                'thumbnail': template.thumbnail,
-                'timeline_data': template.timeline_data,
-                'exports_count': template.exports_count,
-                'created_at': template.created_at.isoformat(),
-                'updated_at': template.updated_at.isoformat()
-            }
-        })
+        return JsonResponse({'data': serialize_template(template)})
     except Exception as e:
         logger.error(f"Create template error: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
@@ -201,15 +181,14 @@ def create_template(request):
 
 @csrf_exempt
 @require_http_methods(["PUT"])
+@clerk_auth_required
 def update_template(request, template_id):
     try:
+        user_id = request.clerk_user_id
         data = json.loads(request.body)
-        device_id = data.get('device_id')
-        if not device_id:
-            return JsonResponse({'error': 'device_id is required'}, status=400)
 
         try:
-            template = Template.objects.get(id=template_id, device_id=device_id)
+            template = Template.objects.get(id=template_id, user_id=user_id)
         except Template.DoesNotExist:
             return JsonResponse({'error': 'Template not found'}, status=404)
 
@@ -224,18 +203,7 @@ def update_template(request, template_id):
 
         template.save()
 
-        return JsonResponse({
-            'data': {
-                'id': str(template.id),
-                'device_id': template.device_id,
-                'name': template.name,
-                'thumbnail': template.thumbnail,
-                'timeline_data': template.timeline_data,
-                'exports_count': template.exports_count,
-                'created_at': template.created_at.isoformat(),
-                'updated_at': template.updated_at.isoformat()
-            }
-        })
+        return JsonResponse({'data': serialize_template(template)})
     except Exception as e:
         logger.error(f"Update template error: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
@@ -243,70 +211,60 @@ def update_template(request, template_id):
 
 @csrf_exempt
 @require_http_methods(["DELETE"])
+@clerk_auth_required
 def delete_template(request, template_id):
-    device_id = request.GET.get('device_id')
-    if not device_id:
-        return JsonResponse({'error': 'device_id is required'}, status=400)
+    user_id = request.clerk_user_id
 
     try:
-        template = Template.objects.get(id=template_id, device_id=device_id)
+        template = Template.objects.get(id=template_id, user_id=user_id)
         template.delete()
         return JsonResponse({'success': True})
     except Template.DoesNotExist:
         return JsonResponse({'error': 'Template not found'}, status=404)
 
 
-@csrf_exempt
-@require_http_methods(["GET"])
-def get_media_items(request):
-    device_id = request.GET.get('device_id')
-    if not device_id:
-        return JsonResponse({'error': 'device_id is required'}, status=400)
-
-    type_filter = request.GET.get('type')
-    queryset = MediaLibrary.objects.filter(device_id=device_id)
-
-    if type_filter and type_filter != 'all':
-        queryset = queryset.filter(type=type_filter)
-
-    data = [{
+def serialize_media(m):
+    return {
         'id': str(m.id),
-        'device_id': m.device_id,
+        'user_id': m.user_id,
         'name': m.name,
         'type': m.type,
         'files': m.files,
         'created_at': m.created_at.isoformat()
-    } for m in queryset]
+    }
 
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@clerk_auth_required
+def get_media_items(request):
+    user_id = request.clerk_user_id
+    type_filter = request.GET.get('type')
+    queryset = MediaLibrary.objects.filter(user_id=user_id)
+
+    if type_filter and type_filter != 'all':
+        queryset = queryset.filter(type=type_filter)
+
+    data = [serialize_media(m) for m in queryset]
     return JsonResponse({'data': data})
 
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@clerk_auth_required
 def create_media_item(request):
     try:
+        user_id = request.clerk_user_id
         data = json.loads(request.body)
-        device_id = data.get('device_id')
-        if not device_id:
-            return JsonResponse({'error': 'device_id is required'}, status=400)
 
         media_item = MediaLibrary.objects.create(
-            device_id=device_id,
+            user_id=user_id,
             name=data.get('name', 'Untitled Pool'),
             type=data.get('type', 'image_pool'),
             files=data.get('files', [])
         )
 
-        return JsonResponse({
-            'data': {
-                'id': str(media_item.id),
-                'device_id': media_item.device_id,
-                'name': media_item.name,
-                'type': media_item.type,
-                'files': media_item.files,
-                'created_at': media_item.created_at.isoformat()
-            }
-        })
+        return JsonResponse({'data': serialize_media(media_item)})
     except Exception as e:
         logger.error(f"Create media item error: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
@@ -314,13 +272,12 @@ def create_media_item(request):
 
 @csrf_exempt
 @require_http_methods(["DELETE"])
+@clerk_auth_required
 def delete_media_item(request, media_id):
-    device_id = request.GET.get('device_id')
-    if not device_id:
-        return JsonResponse({'error': 'device_id is required'}, status=400)
+    user_id = request.clerk_user_id
 
     try:
-        media_item = MediaLibrary.objects.get(id=media_id, device_id=device_id)
+        media_item = MediaLibrary.objects.get(id=media_id, user_id=user_id)
         media_item.delete()
         return JsonResponse({'success': True})
     except MediaLibrary.DoesNotExist:

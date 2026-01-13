@@ -2,25 +2,32 @@
     let templates = [];
     let currentView = 'grid';
     let selectedTemplateId = null;
-    let deviceId = null;
+    let userId = null;
 
-    function getDeviceId() {
-        let id = localStorage.getItem('beamreels_device_id');
-        if (!id) {
-            id = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            localStorage.setItem('beamreels_device_id', id);
+    async function initApi() {
+        if (window.BeamreelsAuth) {
+            userId = await window.BeamreelsAuth.getUserId();
         }
-        return id;
+        return !!userId;
     }
 
-    function initApi() {
-        deviceId = getDeviceId();
-        return true;
+    async function getAuthHeaders() {
+        const headers = { 'Content-Type': 'application/json' };
+        if (window.BeamreelsAuth) {
+            const token = await window.BeamreelsAuth.getSessionToken();
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+        }
+        return headers;
     }
 
     async function getAllTemplates() {
         try {
-            const response = await fetch(`${window.API_BASE_URL}/api/templates/?device_id=${deviceId}`);
+            const headers = await getAuthHeaders();
+            const response = await fetch(`${window.API_BASE_URL}/api/templates/`, {
+                headers
+            });
             if (!response.ok) {
                 console.error('Error fetching templates: HTTP', response.status);
                 return [];
@@ -38,12 +45,12 @@
     }
 
     async function saveTemplate(template) {
+        const headers = await getAuthHeaders();
         const response = await fetch(`${window.API_BASE_URL}/api/templates/create/`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
                 id: template.id,
-                device_id: deviceId,
                 name: template.name,
                 thumbnail: template.thumbnail,
                 timeline_data: template.timeline_data || { elements: [], overlays: [], variablePools: {} },
@@ -59,11 +66,11 @@
     }
 
     async function updateTemplate(template) {
+        const headers = await getAuthHeaders();
         const response = await fetch(`${window.API_BASE_URL}/api/templates/${template.id}/update/`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
-                device_id: deviceId,
                 name: template.name,
                 thumbnail: template.thumbnail,
                 timeline_data: template.timeline_data,
@@ -79,8 +86,10 @@
     }
 
     async function deleteTemplateFromDB(id) {
-        const response = await fetch(`${window.API_BASE_URL}/api/templates/${id}/delete/?device_id=${deviceId}`, {
-            method: 'DELETE'
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${window.API_BASE_URL}/api/templates/${id}/delete/`, {
+            method: 'DELETE',
+            headers
         });
 
         const result = await response.json();
@@ -239,7 +248,6 @@
 
         const duplicate = {
             id: crypto.randomUUID(),
-            device_id: deviceId,
             name: `${original.name} (Copy)`,
             thumbnail: original.thumbnail,
             timeline_data: JSON.parse(JSON.stringify(original.timeline_data || {})),
@@ -361,7 +369,6 @@
 
         const template = {
             id: crypto.randomUUID(),
-            device_id: deviceId,
             name: fileName.replace(/\.[^/.]+$/, ''),
             thumbnail: thumbnail,
             timeline_data: { elements: [], overlays: [], variablePools: {} },
@@ -419,7 +426,6 @@
     async function createBlankTemplate() {
         const template = {
             id: crypto.randomUUID(),
-            device_id: deviceId,
             name: 'Untitled Template',
             thumbnail: null,
             timeline_data: { elements: [], overlays: [], variablePools: {} },
@@ -621,7 +627,7 @@
 
     async function init() {
         try {
-            initApi();
+            await initApi();
             templates = await getAllTemplates();
             renderTemplates();
             setupEventListeners();

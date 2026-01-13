@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Beamreels</title>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg: #fbfbfd;
+            --bg-alt: #f5f5f7;
+            --text-main: #1d1d1f;
+            --text-subtle: #6e6e73;
+            --link: #0071e3;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            backdrop-filter: blur(20px);
+            background: rgba(251, 251, 253, 0.88);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .nav-inner {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+        .nav-logo {
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            color: #424245;
+        }
+
+        .nav-links a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .nav-links a:hover {
+            color: var(--text-main);
+        }
+
+        .auth-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .auth-title {
+            font-size: 32px;
+            font-weight: 600;
+            letter-spacing: -0.03em;
+            margin-bottom: 8px;
+        }
+
+        .auth-subtitle {
+            font-size: 16px;
+            color: var(--text-subtle);
+            margin-bottom: 32px;
+        }
+
+        #clerk-sign-in {
+            display: flex;
+            justify-content: center;
+        }
+
+        .auth-footer {
+            margin-top: 24px;
+            font-size: 14px;
+            color: var(--text-subtle);
+        }
+
+        .auth-footer a {
+            color: var(--link);
+            text-decoration: none;
+        }
+
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .loading-state {
+            padding: 40px;
+            color: var(--text-subtle);
+        }
+
+        .error-state {
+            padding: 24px;
+            background: #fef2f2;
+            border-radius: 12px;
+            color: #991b1b;
+            font-size: 14px;
+        }
+
+        @media (max-width: 480px) {
+            .auth-title {
+                font-size: 28px;
+            }
+
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+    <script src="js/config.js"></script>
+</head>
+<body>
+    <header class="nav">
+        <div class="nav-inner">
+            <a href="index.html" class="nav-logo">Beamreels</a>
+            <nav class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="signup.html">Sign Up</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1 class="auth-title">Welcome back</h1>
+            <p class="auth-subtitle">Sign in to your account to continue</p>
+
+            <div id="clerk-sign-in">
+                <div class="loading-state">Loading...</div>
+            </div>
+
+            <div class="auth-footer">
+                Don't have an account? <a href="signup.html">Sign up</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        (async function() {
+            const container = document.getElementById('clerk-sign-in');
+
+            if (!window.CLERK_PUBLISHABLE_KEY) {
+                container.innerHTML = '<div class="error-state">Clerk is not configured. Please set CLERK_PUBLISHABLE_KEY.</div>';
+                return;
+            }
+
+            try {
+                const clerk = await window.BeamreelsAuth.initClerk();
+
+                if (!clerk) {
+                    container.innerHTML = '<div class="error-state">Failed to initialize authentication.</div>';
+                    return;
+                }
+
+                if (clerk.user) {
+                    window.location.href = 'dashboard.html';
+                    return;
+                }
+
+                container.innerHTML = '';
+                clerk.mountSignIn(container, {
+                    afterSignInUrl: 'dashboard.html',
+                    signUpUrl: 'signup.html',
+                    appearance: {
+                        elements: {
+                            rootBox: {
+                                width: '100%'
+                            },
+                            card: {
+                                boxShadow: 'none',
+                                border: '1px solid rgba(0, 0, 0, 0.06)'
+                            }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('Auth error:', err);
+                container.innerHTML = '<div class="error-state">Failed to load sign-in form. Please try again.</div>';
+            }
+        })();
+    </script>
+</body>
+</html>

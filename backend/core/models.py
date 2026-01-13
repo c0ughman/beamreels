@@ -4,7 +4,8 @@ from django.db import models
 
 class Template(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    device_id = models.CharField(max_length=100, db_index=True)
+    user_id = models.CharField(max_length=100, db_index=True, blank=True, null=True)
+    device_id = models.CharField(max_length=100, db_index=True, blank=True, null=True)
     name = models.CharField(max_length=255)
     thumbnail = models.TextField(blank=True, null=True)
     timeline_data = models.JSONField(default=dict)
@@ -15,6 +16,7 @@ class Template(models.Model):
     class Meta:
         ordering = ['-updated_at']
         indexes = [
+            models.Index(fields=['user_id', '-updated_at']),
             models.Index(fields=['device_id', '-updated_at']),
         ]
 
@@ -29,7 +31,8 @@ class MediaLibrary(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    device_id = models.CharField(max_length=100, db_index=True)
+    user_id = models.CharField(max_length=100, db_index=True, blank=True, null=True)
+    device_id = models.CharField(max_length=100, db_index=True, blank=True, null=True)
     name = models.CharField(max_length=255)
     type = models.CharField(max_length=20, choices=TYPE_CHOICES)
     files = models.JSONField(default=list)
@@ -38,6 +41,7 @@ class MediaLibrary(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
+            models.Index(fields=['user_id', '-created_at']),
             models.Index(fields=['device_id', '-created_at']),
         ]
 
