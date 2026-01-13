@@ -1,72 +1,76 @@
 (function() {
-    const DB_NAME = 'BeamreelsDB';
-    const DB_VERSION = 1;
-    const TEMPLATES_STORE = 'templates';
-
-    let db = null;
+    let supabase = null;
     let templates = [];
     let currentView = 'grid';
     let selectedTemplateId = null;
+    let deviceId = null;
 
-    function initDB() {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-            request.onerror = () => reject(request.error);
-
-            request.onsuccess = () => {
-                db = request.result;
-                resolve(db);
-            };
-
-            request.onupgradeneeded = (event) => {
-                const database = event.target.result;
-
-                if (!database.objectStoreNames.contains(TEMPLATES_STORE)) {
-                    const store = database.createObjectStore(TEMPLATES_STORE, { keyPath: 'id' });
-                    store.createIndex('name', 'name', { unique: false });
-                    store.createIndex('createdAt', 'createdAt', { unique: false });
-                    store.createIndex('updatedAt', 'updatedAt', { unique: false });
-                }
-            };
-        });
+    function getDeviceId() {
+        let id = localStorage.getItem('beamreels_device_id');
+        if (!id) {
+            id = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            localStorage.setItem('beamreels_device_id', id);
+        }
+        return id;
     }
 
-    function getAllTemplates() {
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction([TEMPLATES_STORE], 'readonly');
-            const store = transaction.objectStore(TEMPLATES_STORE);
-            const request = store.getAll();
-
-            request.onsuccess = () => resolve(request.result || []);
-            request.onerror = () => reject(request.error);
-        });
+    function initSupabase() {
+        if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+            console.error('Supabase configuration missing');
+            return false;
+        }
+        supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+        deviceId = getDeviceId();
+        return true;
     }
 
-    function saveTemplate(template) {
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction([TEMPLATES_STORE], 'readwrite');
-            const store = transaction.objectStore(TEMPLATES_STORE);
-            const request = store.put(template);
+    async function getAllTemplates() {
+        const { data, error } = await supabase
+            .from('templates')
+            .select('*')
+            .eq('device_id', deviceId)
+            .order('updated_at', { ascending: false });
 
-            request.onsuccess = () => resolve(template);
-            request.onerror = () => reject(request.error);
-        });
+        if (error) {
+            console.error('Error fetching templates:', error);
+            return [];
+        }
+        return data || [];
     }
 
-    function deleteTemplate(id) {
-        return new Promise((resolve, reject) => {
-            const transaction = db.transaction([TEMPLATES_STORE], 'readwrite');
-            const store = transaction.objectStore(TEMPLATES_STORE);
-            const request = store.delete(id);
+    async function saveTemplate(template) {
+        const { data, error } = await supabase
+            .from('templates')
+            .upsert({
+                id: template.id,
+                device_id: deviceId,
+                name: template.name,
+                thumbnail: template.thumbnail,
+                timeline_data: template.timeline_data || { elements: [], overlays: [], variablePools: {} },
+                exports_count: template.exports_count || 0,
+                updated_at: new Date().toISOString()
+            })
+            .select()
+            .single();
 
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(request.error);
-        });
+        if (error) {
+            console.error('Error saving template:', error);
+            throw error;
+        }
+        return data;
     }
 
-    function generateId() {
-        return 'tpl_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    async function deleteTemplateFromDB(id) {
+        const { error } = await supabase
+            .from('templates')
+            .delete()
+            .eq('id', id)
+            .eq('device_id', deviceId);
+
+        if (error) {
+            console.error('Error deleting template:', error);
+            throw error;
+        }
     }
 
     function formatDate(date) {
@@ -80,6 +84,13 @@
         if (days < 7) return `${days} days ago`;
 
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function getElementCount(template) {
+        if (template.timeline_data && template.timeline_data.elements) {
+            return template.timeline_data.elements.length;
+        }
+        return 0;
     }
 
     function createTemplateCard(template) {
@@ -97,10 +108,12 @@
                 </svg>
                </div>`;
 
+        const elementCount = getElementCount(template);
+
         card.innerHTML = `
             <div class="template-card-thumbnail">
                 ${thumbnailContent}
-                ${template.elements ? `<span class="template-card-badge">${template.elements.length} clips</span>` : ''}
+                ${elementCount > 0 ? `<span class="template-card-badge">${elementCount} clips</span>` : ''}
                 <button class="template-card-menu" data-action="menu">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                         <circle cx="12" cy="6" r="1.5"/>
@@ -112,8 +125,8 @@
             <div class="template-card-info">
                 <h3 class="template-card-name">${template.name}</h3>
                 <div class="template-card-meta">
-                    <span>${formatDate(template.updatedAt || template.createdAt)}</span>
-                    ${template.exports ? `<span>${template.exports} exports</span>` : ''}
+                    <span>${formatDate(template.updated_at || template.created_at)}</span>
+                    ${template.exports_count ? `<span>${template.exports_count} exports</span>` : ''}
                 </div>
             </div>
         `;
@@ -153,10 +166,10 @@
                 case 'name':
                     return a.name.localeCompare(b.name);
                 case 'exports':
-                    return (b.exports || 0) - (a.exports || 0);
+                    return (b.exports_count || 0) - (a.exports_count || 0);
                 case 'recent':
                 default:
-                    return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
+                    return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
             }
         });
 
@@ -194,12 +207,8 @@
     }
 
     function openTemplate(id) {
-        const template = templates.find(t => t.id === id);
-        if (template) {
-            localStorage.setItem('currentTemplateId', id);
-            localStorage.setItem('currentTemplateData', JSON.stringify(template));
-            window.location.href = 'creator.html';
-        }
+        localStorage.setItem('currentTemplateId', id);
+        window.location.href = 'creator.html';
     }
 
     function openTemplateActions(id, name) {
@@ -213,19 +222,25 @@
         if (!original) return;
 
         const duplicate = {
-            ...original,
-            id: generateId(),
+            id: crypto.randomUUID(),
+            device_id: deviceId,
             name: `${original.name} (Copy)`,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            exports: 0
+            thumbnail: original.thumbnail,
+            timeline_data: JSON.parse(JSON.stringify(original.timeline_data || {})),
+            exports_count: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
         };
 
-        await saveTemplate(duplicate);
-        templates.push(duplicate);
-        renderTemplates();
-        closeAllModals();
-        showToast('Template duplicated');
+        try {
+            const saved = await saveTemplate(duplicate);
+            templates.unshift(saved);
+            renderTemplates();
+            closeAllModals();
+            showToast('Template duplicated');
+        } catch (err) {
+            showToast('Failed to duplicate template');
+        }
     }
 
     async function renameTemplate(id) {
@@ -235,22 +250,30 @@
         const newName = prompt('Enter new name:', template.name);
         if (newName && newName.trim()) {
             template.name = newName.trim();
-            template.updatedAt = new Date().toISOString();
-            await saveTemplate(template);
-            renderTemplates();
-            closeAllModals();
-            showToast('Template renamed');
+            template.updated_at = new Date().toISOString();
+            try {
+                await saveTemplate(template);
+                renderTemplates();
+                closeAllModals();
+                showToast('Template renamed');
+            } catch (err) {
+                showToast('Failed to rename template');
+            }
         }
     }
 
     async function removeTemplate(id) {
         if (!confirm('Are you sure you want to delete this template?')) return;
 
-        await deleteTemplate(id);
-        templates = templates.filter(t => t.id !== id);
-        renderTemplates();
-        closeAllModals();
-        showToast('Template deleted');
+        try {
+            await deleteTemplateFromDB(id);
+            templates = templates.filter(t => t.id !== id);
+            renderTemplates();
+            closeAllModals();
+            showToast('Template deleted');
+        } catch (err) {
+            showToast('Failed to delete template');
+        }
     }
 
     function showToast(message) {
@@ -318,27 +341,32 @@
         uploadStatus.textContent = 'Creating template...';
         analyzeBtn.disabled = true;
 
+        const thumbnail = videoData ? await generateVideoThumbnail(videoData) : null;
+
         const template = {
-            id: generateId(),
+            id: crypto.randomUUID(),
+            device_id: deviceId,
             name: fileName.replace(/\.[^/.]+$/, ''),
-            thumbnail: videoData ? await generateVideoThumbnail(videoData) : null,
-            elements: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            exports: 0,
-            sourceVideo: videoData
+            thumbnail: thumbnail,
+            timeline_data: { elements: [], overlays: [], variablePools: {} },
+            exports_count: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
         };
 
-        await saveTemplate(template);
-        templates.push(template);
+        try {
+            const saved = await saveTemplate(template);
+            templates.unshift(saved);
+            closeAllModals();
+            renderTemplates();
+            showToast('Template created');
 
-        closeAllModals();
-        renderTemplates();
-        showToast('Template created');
-
-        setTimeout(() => {
-            openTemplate(template.id);
-        }, 500);
+            setTimeout(() => {
+                openTemplate(saved.id);
+            }, 500);
+        } catch (err) {
+            showToast('Failed to create template');
+        }
     }
 
     function generateVideoThumbnail(videoData) {
@@ -374,22 +402,25 @@
 
     async function createBlankTemplate() {
         const template = {
-            id: generateId(),
+            id: crypto.randomUUID(),
+            device_id: deviceId,
             name: 'Untitled Template',
             thumbnail: null,
-            elements: [],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            exports: 0
+            timeline_data: { elements: [], overlays: [], variablePools: {} },
+            exports_count: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
         };
 
-        await saveTemplate(template);
-        templates.push(template);
-
-        closeAllModals();
-        renderTemplates();
-
-        openTemplate(template.id);
+        try {
+            const saved = await saveTemplate(template);
+            templates.unshift(saved);
+            closeAllModals();
+            renderTemplates();
+            openTemplate(saved.id);
+        } catch (err) {
+            showToast('Failed to create template');
+        }
     }
 
     function setupEventListeners() {
@@ -574,7 +605,10 @@
 
     async function init() {
         try {
-            await initDB();
+            if (!initSupabase()) {
+                showToast('Failed to connect to database');
+                return;
+            }
             templates = await getAllTemplates();
             renderTemplates();
             setupEventListeners();

@@ -3,6 +3,7 @@
 /creator /creator.html 200
 /dashboard /dashboard.html 200
 /exports /exports.html 200
+/media-library /media-library.html 200
 /api/* https://your-railway-backend-url.railway.app/api/:splat 200
 /media/* https://your-railway-backend-url.railway.app/media/:splat 200
 

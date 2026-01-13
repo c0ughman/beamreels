@@ -9,20 +9,20 @@
     <link rel="stylesheet" href="css/creator.css">
 
     <script>
-        // API base URL - set from Netlify environment variable or use relative path
         window.API_BASE_URL = window.API_BASE_URL || '';
+        window.SUPABASE_URL = 'https://joivvptozcoyblqommsb.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvaXZ2cHRvemNveWJscW9tbXNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzYyNzIsImV4cCI6MjA4Mzg1MjI3Mn0.ki4km2fX6qC2pmN1B8cRHyRo8o4ccaMUk1-ZVDPMedQ';
     </script>
 </head>
 <body>
-    <nav class="creator-nav">
-        <a href="dashboard.html" class="creator-nav-back">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            Dashboard
-        </a>
-        <span class="creator-nav-title">Template Editor</span>
-    </nav>
+    <a href="dashboard.html" class="back-to-dashboard" id="backToDashboard" title="Back to Dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+    </a>
+    <div class="save-indicator" id="saveIndicator">
+        <span class="save-indicator-text">Saved</span>
+    </div>
     <div class="container">
         <div class="canvas">
             <!-- Timeline Track -->
@@ -667,6 +667,7 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/creator.js"></script>
 </body>
 </html>

@@ -22,6 +22,11 @@
   to = "/exports.html"
   status = 200
 
+[[redirects]]
+  from = "/media-library"
+  to = "/media-library.html"
+  status = 200
+
 # API proxy - forward API requests to Railway backend
 [[redirects]]
   from = "/api/*"

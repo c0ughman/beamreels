@@ -4,6 +4,411 @@
         const PIXEL_PER_SECOND = 40; // 200px / 5 seconds = 40px per second
         const MAX_DURATION = 60;
 
+        // Supabase Configuration
+        let supabaseClient = null;
+        let currentTemplateId = null;
+        let currentTemplate = null;
+        let deviceId = null;
+        let autoSaveTimeout = null;
+        let isSaving = false;
+        const AUTO_SAVE_DELAY = 2000;
+
+        function getDeviceId() {
+            let id = localStorage.getItem('beamreels_device_id');
+            if (!id) {
+                id = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('beamreels_device_id', id);
+            }
+            return id;
+        }
+
+        function initSupabase() {
+            if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
+                console.warn('Supabase configuration missing');
+                return false;
+            }
+            supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+            deviceId = getDeviceId();
+            currentTemplateId = localStorage.getItem('currentTemplateId');
+            return true;
+        }
+
+        async function loadTemplateFromSupabase() {
+            if (!supabaseClient || !currentTemplateId) return null;
+
+            const { data, error } = await supabaseClient
+                .from('templates')
+                .select('*')
+                .eq('id', currentTemplateId)
+                .maybeSingle();
+
+            if (error) {
+                console.error('Error loading template:', error);
+                return null;
+            }
+
+            currentTemplate = data;
+            return data;
+        }
+
+        async function saveTemplateToSupabase(showIndicator = true) {
+            if (!supabaseClient || !currentTemplateId || !deviceId) return;
+            if (isSaving) return;
+
+            isSaving = true;
+            const saveIndicator = document.getElementById('saveIndicator');
+
+            if (showIndicator && saveIndicator) {
+                saveIndicator.querySelector('.save-indicator-text').textContent = 'Saving...';
+                saveIndicator.classList.remove('saved');
+                saveIndicator.classList.add('visible', 'saving');
+            }
+
+            try {
+                const timelineData = await collectTimelineDataForSave();
+                const thumbnail = await generateTimelineThumbnail();
+
+                const { error } = await supabaseClient
+                    .from('templates')
+                    .update({
+                        timeline_data: timelineData,
+                        thumbnail: thumbnail,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', currentTemplateId)
+                    .eq('device_id', deviceId);
+
+                if (error) {
+                    console.error('Error saving template:', error);
+                } else if (showIndicator && saveIndicator) {
+                    saveIndicator.querySelector('.save-indicator-text').textContent = 'Saved';
+                    saveIndicator.classList.remove('saving');
+                    saveIndicator.classList.add('saved');
+                    setTimeout(() => {
+                        saveIndicator.classList.remove('visible');
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Save error:', err);
+            } finally {
+                isSaving = false;
+            }
+        }
+
+        function triggerAutoSave() {
+            if (autoSaveTimeout) {
+                clearTimeout(autoSaveTimeout);
+            }
+            autoSaveTimeout = setTimeout(() => {
+                saveTemplateToSupabase();
+            }, AUTO_SAVE_DELAY);
+        }
+
+        async function collectTimelineDataForSave() {
+            const elementsRow = document.getElementById('elementsRow');
+            const editTrack = document.getElementById('editTrack');
+
+            const timelineElements = Array.from(elementsRow.querySelectorAll('.timeline-element')).filter(el => {
+                const isFinalized = el.dataset.finalized === 'true';
+                const hasType = el.dataset.type && el.dataset.type !== 'none';
+                return isFinalized && hasType;
+            });
+
+            timelineElements.sort((a, b) => {
+                return a.getBoundingClientRect().left - b.getBoundingClientRect().left;
+            });
+
+            const elements = timelineElements.map(el => {
+                const type = el.dataset.type;
+                let mediaUrl = null;
+
+                if (type === 'image') {
+                    mediaUrl = el.dataset.imageData || null;
+                } else if (type === 'video' && el.dataset.videoURL) {
+                    mediaUrl = el.dataset.videoURL;
+                }
+
+                const poolData = el.dataset.poolData ? JSON.parse(el.dataset.poolData) : null;
+                const aiVideoConfig = el.dataset.aiVideoConfig ? JSON.parse(el.dataset.aiVideoConfig) : null;
+                const aiImageConfig = el.dataset.aiImageConfig ? JSON.parse(el.dataset.aiImageConfig) : null;
+
+                return {
+                    type: type,
+                    duration: parseInt(el.dataset.duration) || 5,
+                    mediaUrl: mediaUrl,
+                    poolData: poolData,
+                    poolName: el.dataset.poolName || null,
+                    aiVideoConfig: aiVideoConfig,
+                    aiImageConfig: aiImageConfig,
+                    shouldLoop: el.dataset.shouldLoop === 'true',
+                    videoStartTime: parseFloat(el.dataset.videoStartTime) || 0
+                };
+            });
+
+            const editElements = Array.from(editTrack.querySelectorAll('.edit-element[data-finalized="true"]'));
+            const overlays = editElements.map(editEl => {
+                const overlayUrl = editEl.dataset.overlayUrl;
+                if (!overlayUrl) return null;
+
+                return {
+                    overlayUrl: overlayUrl,
+                    duration: parseInt(editEl.dataset.duration) || 5,
+                    left: parseFloat(editEl.style.left) || 0
+                };
+            }).filter(o => o !== null);
+
+            return {
+                elements: elements,
+                overlays: overlays,
+                variablePools: variablePools || {}
+            };
+        }
+
+        async function generateTimelineThumbnail() {
+            const firstElement = document.querySelector('.timeline-element[data-finalized="true"]');
+            if (!firstElement) return null;
+
+            const type = firstElement.dataset.type;
+            let thumbnail = null;
+
+            if (type === 'image') {
+                const imageData = firstElement.dataset.imageData;
+                if (imageData) {
+                    thumbnail = await resizeImage(imageData, 180, 320);
+                }
+            } else if (type === 'video') {
+                const videoURL = firstElement.dataset.videoURL;
+                if (videoURL) {
+                    thumbnail = await extractVideoThumbnail(videoURL, 180, 320);
+                }
+            } else if (type === 'pool') {
+                const poolData = firstElement.dataset.poolData ? JSON.parse(firstElement.dataset.poolData) : null;
+                if (poolData && poolData.files && poolData.files[0] && poolData.files[0].data) {
+                    thumbnail = await resizeImage(poolData.files[0].data, 180, 320);
+                }
+            }
+
+            return thumbnail;
+        }
+
+        function resizeImage(dataUrl, maxWidth, maxHeight) {
+            return new Promise(resolve => {
+                if (!dataUrl || !dataUrl.startsWith('data:image')) {
+                    resolve(null);
+                    return;
+                }
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = maxWidth;
+                    canvas.height = maxHeight;
+                    const ctx = canvas.getContext('2d');
+                    const scale = Math.max(maxWidth / img.width, maxHeight / img.height);
+                    const x = (maxWidth - img.width * scale) / 2;
+                    const y = (maxHeight - img.height * scale) / 2;
+                    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+                img.onerror = () => resolve(null);
+                img.src = dataUrl;
+            });
+        }
+
+        function extractVideoThumbnail(videoUrl, maxWidth, maxHeight) {
+            return new Promise(resolve => {
+                const video = document.createElement('video');
+                video.src = videoUrl;
+                video.crossOrigin = 'anonymous';
+                video.muted = true;
+                video.onloadeddata = () => { video.currentTime = 0.5; };
+                video.onseeked = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = maxWidth;
+                    canvas.height = maxHeight;
+                    const ctx = canvas.getContext('2d');
+                    const scale = Math.max(maxWidth / video.videoWidth, maxHeight / video.videoHeight);
+                    const x = (maxWidth - video.videoWidth * scale) / 2;
+                    const y = (maxHeight - video.videoHeight * scale) / 2;
+                    ctx.drawImage(video, x, y, video.videoWidth * scale, video.videoHeight * scale);
+                    resolve(canvas.toDataURL('image/jpeg', 0.7));
+                };
+                video.onerror = () => resolve(null);
+                setTimeout(() => resolve(null), 5000);
+            });
+        }
+
+        async function applyTemplateToTimeline(timelineData) {
+            if (!timelineData) return;
+
+            const elementsRow = document.getElementById('elementsRow');
+            const editTrack = document.getElementById('editTrack');
+
+            if (timelineData.variablePools) {
+                variablePools = Array.isArray(timelineData.variablePools)
+                    ? timelineData.variablePools
+                    : Object.values(timelineData.variablePools);
+            }
+
+            if (timelineData.elements && timelineData.elements.length > 0) {
+                const initialElement = elementsRow.querySelector('.timeline-element');
+                if (initialElement) {
+                    initialElement.remove();
+                }
+
+                for (const elementData of timelineData.elements) {
+                    await createElementFromData(elementData);
+                }
+            }
+
+            if (timelineData.overlays && timelineData.overlays.length > 0) {
+                for (const overlayData of timelineData.overlays) {
+                    await createOverlayFromData(overlayData);
+                }
+            }
+        }
+
+        async function createElementFromData(data) {
+            const elementsRow = document.getElementById('elementsRow');
+            const newElement = document.createElement('div');
+            newElement.className = 'timeline-element';
+            newElement.dataset.type = data.type;
+            newElement.dataset.duration = data.duration;
+            newElement.dataset.elementId = nextElementId++;
+            newElement.dataset.finalized = 'true';
+
+            const width = data.duration * PIXEL_PER_SECOND;
+            newElement.style.width = width + 'px';
+            newElement.style.height = BASE_HEIGHT + 'px';
+
+            if (data.mediaUrl) {
+                if (data.type === 'image') {
+                    newElement.dataset.imageData = data.mediaUrl;
+                } else if (data.type === 'video') {
+                    newElement.dataset.videoURL = data.mediaUrl;
+                }
+            }
+
+            if (data.poolData) {
+                newElement.dataset.poolData = JSON.stringify(data.poolData);
+                newElement.dataset.poolName = data.poolName || '';
+            }
+
+            if (data.aiVideoConfig) {
+                newElement.dataset.aiVideoConfig = JSON.stringify(data.aiVideoConfig);
+            }
+
+            if (data.aiImageConfig) {
+                newElement.dataset.aiImageConfig = JSON.stringify(data.aiImageConfig);
+            }
+
+            if (data.shouldLoop) {
+                newElement.dataset.shouldLoop = 'true';
+            }
+
+            if (data.videoStartTime) {
+                newElement.dataset.videoStartTime = data.videoStartTime;
+            }
+
+            const innerContent = createElementInnerContent(data);
+            newElement.innerHTML = innerContent;
+
+            const resizeHandle = document.createElement('div');
+            resizeHandle.className = 'resize-handle';
+            newElement.appendChild(resizeHandle);
+
+            elementsRow.appendChild(newElement);
+            setupElementHandlers(newElement);
+
+            return newElement;
+        }
+
+        function createElementInnerContent(data) {
+            let bgStyle = '';
+            let labelText = '';
+
+            switch (data.type) {
+                case 'image':
+                    if (data.mediaUrl) {
+                        bgStyle = `background-image: url('${data.mediaUrl}'); background-size: cover; background-position: center;`;
+                    } else {
+                        bgStyle = 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);';
+                    }
+                    labelText = 'Image';
+                    break;
+                case 'video':
+                    bgStyle = 'background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);';
+                    labelText = 'Video';
+                    break;
+                case 'pool':
+                    if (data.poolData && data.poolData.files && data.poolData.files[0] && data.poolData.files[0].data) {
+                        bgStyle = `background-image: url('${data.poolData.files[0].data}'); background-size: cover; background-position: center;`;
+                    } else {
+                        bgStyle = 'background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);';
+                    }
+                    labelText = data.poolName || 'Pool';
+                    break;
+                case 'ai-video':
+                    bgStyle = 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);';
+                    labelText = 'AI Video';
+                    break;
+                case 'ai-image':
+                    bgStyle = 'background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);';
+                    labelText = 'AI Image';
+                    break;
+                default:
+                    bgStyle = 'background: #e5e5e7;';
+                    labelText = data.type;
+            }
+
+            return `
+                <div class="element-content" style="${bgStyle}">
+                    <div class="element-label">${labelText}</div>
+                    <div class="element-duration">${data.duration}s</div>
+                </div>
+            `;
+        }
+
+        async function createOverlayFromData(data) {
+            if (!data.overlayUrl) return null;
+
+            const editTrack = document.getElementById('editTrack');
+            const newEditElement = document.createElement('div');
+            newEditElement.className = 'edit-element';
+            newEditElement.dataset.duration = data.duration;
+            newEditElement.dataset.finalized = 'true';
+            newEditElement.dataset.overlayUrl = data.overlayUrl;
+
+            const width = data.duration * PIXEL_PER_SECOND;
+            newEditElement.style.width = width + 'px';
+            newEditElement.style.left = (data.left || 0) + 'px';
+
+            newEditElement.innerHTML = `
+                <div class="edit-content">
+                    <div class="edit-preview" style="background-image: url('${data.overlayUrl}'); background-size: cover; background-position: center;">
+                        <span class="edit-label">Text</span>
+                    </div>
+                </div>
+                <div class="resize-handle"></div>
+            `;
+
+            editTrack.appendChild(newEditElement);
+
+            return newEditElement;
+        }
+
+        function setupElementHandlers(element) {
+            element.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('resize-handle')) {
+                    showElementForm(element, e);
+                }
+            });
+
+            const resizeHandle = element.querySelector('.resize-handle');
+            if (resizeHandle) {
+                resizeHandle.addEventListener('mousedown', (e) => startResize(e, element));
+            }
+        }
+
         // Zoom Configuration
         let currentZoomMode = 'default'; // 'default', 'adaptive', 'fixed'
         const FIXED_ZOOM_OUT_FACTOR = 2.2; // 2.2x zoom out for fixed mode
@@ -4782,6 +5187,9 @@
 
             // Update edit track bounds when timeline elements are added
             repositionEmptyEditSlot();
+
+            // Trigger auto-save
+            triggerAutoSave();
         }
 
         // Update video element preview with frame thumbnails (without changing finalized state)
@@ -5271,6 +5679,9 @@
 
             // Update edit track bounds when timeline elements are resized
             repositionEmptyEditSlot();
+
+            // Trigger auto-save
+            triggerAutoSave();
         }
 
         // ===== DRAG-TO-REORDER FUNCTIONALITY =====
@@ -5511,6 +5922,9 @@
             // Update edit track bounds when timeline elements are reordered
             // (reordering doesn't change duration, but we call it for consistency)
             repositionEmptyEditSlot();
+
+            // Trigger auto-save
+            triggerAutoSave();
         }
 
         // ===== END DRAG-TO-REORDER =====
@@ -5563,6 +5977,9 @@
 
             // Show toast notification
             showToast();
+
+            // Trigger auto-save
+            triggerAutoSave();
         }
 
         // Undo delete
@@ -6550,6 +6967,22 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
+            // Initialize Supabase
+            initSupabase();
+
+            // Load template from Supabase if we have a template ID
+            if (currentTemplateId) {
+                try {
+                    const template = await loadTemplateFromSupabase();
+                    if (template && template.timeline_data) {
+                        console.log('Template loaded:', template.name);
+                        await applyTemplateToTimeline(template.timeline_data);
+                    }
+                } catch (err) {
+                    console.error('Error loading template:', err);
+                }
+            }
+
             // Initialize IndexedDB and load pools
             try {
                 await initDB();

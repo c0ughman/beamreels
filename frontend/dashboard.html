@@ -6,6 +6,10 @@
     <title>Dashboard - Beamreels</title>
     <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/dashboard.css">
+    <script>
+        window.SUPABASE_URL = 'https://joivvptozcoyblqommsb.supabase.co';
+        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvaXZ2cHRvemNveWJscW9tbXNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzYyNzIsImV4cCI6MjA4Mzg1MjI3Mn0.ki4km2fX6qC2pmN1B8cRHyRo8o4ccaMUk1-ZVDPMedQ';
+    </script>
 </head>
 <body>
     <div class="app-container">
@@ -33,7 +37,7 @@
                         </svg>
                         <span>Exports</span>
                     </a>
-                    <a href="#" class="nav-item">
+                    <a href="media-library.html" class="nav-item">
                         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                         </svg>
@@ -344,6 +348,7 @@
         <span class="toast-message" id="toastMessage"></span>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/dashboard.js"></script>
 </body>
 </html>
