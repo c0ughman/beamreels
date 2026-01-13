@@ -35,9 +35,9 @@ FRONTEND_URL = os.getenv('FRONTEND_URL', '')
 if FRONTEND_URL:
     CSRF_TRUSTED_ORIGINS.append(FRONTEND_URL)
 
-# Increase max upload size for video export
-DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+# Increase max upload size for video export (base64 images are large)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 524288000  # 500MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 524288000  # 500MB
 
 INSTALLED_APPS = [
     'django.contrib.admin',

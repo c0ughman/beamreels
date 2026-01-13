@@ -7866,6 +7866,38 @@
                     }
                 });
 
+                // Compress image to reduce payload size
+                async function compressImage(dataUrl, maxWidth = 1920, quality = 0.7) {
+                    return new Promise((resolve) => {
+                        if (!dataUrl || !dataUrl.startsWith('data:image')) {
+                            resolve(dataUrl);
+                            return;
+                        }
+
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+
+                            if (width > maxWidth) {
+                                height = (height * maxWidth) / width;
+                                width = maxWidth;
+                            }
+
+                            canvas.width = width;
+                            canvas.height = height;
+
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            resolve(canvas.toDataURL('image/jpeg', quality));
+                        };
+                        img.onerror = () => resolve(dataUrl);
+                        img.src = dataUrl;
+                    });
+                }
+
                 // Collect timeline data for export
                 async function collectTimelineData() {
                     const elementsRow = document.getElementById('elementsRow');
@@ -7902,7 +7934,8 @@
                                 mediaUrl = el.dataset.videoURL || null;
                             }
                         } else if (type === 'image') {
-                            mediaUrl = el.dataset.imageData || null;
+                            const rawImageData = el.dataset.imageData || null;
+                            mediaUrl = await compressImage(rawImageData);
                         } else if (type === 'pool') {
                             // Pool mediaUrl will be selected from poolData by backend
                             mediaUrl = null;
@@ -7914,9 +7947,18 @@
                             mediaUrl = null;
                         }
 
-                        const poolData = el.dataset.poolData ? JSON.parse(el.dataset.poolData) : null;
+                        let poolData = el.dataset.poolData ? JSON.parse(el.dataset.poolData) : null;
                         const aiVideoConfig = el.dataset.aiVideoConfig ? JSON.parse(el.dataset.aiVideoConfig) : null;
                         const aiImageConfig = el.dataset.aiImageConfig ? JSON.parse(el.dataset.aiImageConfig) : null;
+
+                        if (poolData && poolData.files) {
+                            poolData.files = await Promise.all(poolData.files.map(async (file) => {
+                                if (file.data && file.type && file.type.startsWith('image/')) {
+                                    return { ...file, data: await compressImage(file.data) };
+                                }
+                                return file;
+                            }));
+                        }
 
                         const data = {
                             type: type,
@@ -7970,7 +8012,7 @@
                         cumulativeTime += duration;
                     });
 
-                    const overlays = editElements.map(editEl => {
+                    const overlays = (await Promise.all(editElements.map(async (editEl) => {
                         const editLeft = editEl.getBoundingClientRect().left;
                         const editDuration = parseInt(editEl.dataset.duration) || 5;
                         const overlayUrl = editEl.dataset.overlayUrl;
@@ -7999,12 +8041,14 @@
                             }
                         }
 
+                        const compressedOverlay = await compressImage(overlayUrl, 1920, 0.8);
+
                         return {
-                            overlayUrl: overlayUrl,
+                            overlayUrl: compressedOverlay,
                             startTime: editStartTime,
                             duration: editDuration
                         };
-                    }).filter(o => o !== null);
+                    }))).filter(o => o !== null);
 
                     return {
                         elements: elements,
