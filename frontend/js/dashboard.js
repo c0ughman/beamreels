@@ -1,5 +1,4 @@
 (function() {
-    let supabase = null;
     let templates = [];
     let currentView = 'grid';
     let selectedTemplateId = null;
@@ -14,62 +13,71 @@
         return id;
     }
 
-    function initSupabase() {
-        if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
-            console.error('Supabase configuration missing');
-            return false;
-        }
-        supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+    function initApi() {
         deviceId = getDeviceId();
         return true;
     }
 
     async function getAllTemplates() {
-        const { data, error } = await supabase
-            .from('templates')
-            .select('*')
-            .eq('device_id', deviceId)
-            .order('updated_at', { ascending: false });
+        const response = await fetch(`${window.API_BASE_URL}/api/templates/?device_id=${deviceId}`);
+        const result = await response.json();
 
-        if (error) {
-            console.error('Error fetching templates:', error);
+        if (result.error) {
+            console.error('Error fetching templates:', result.error);
             return [];
         }
-        return data || [];
+        return result.data || [];
     }
 
     async function saveTemplate(template) {
-        const { data, error } = await supabase
-            .from('templates')
-            .upsert({
+        const response = await fetch(`${window.API_BASE_URL}/api/templates/create/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 id: template.id,
                 device_id: deviceId,
                 name: template.name,
                 thumbnail: template.thumbnail,
                 timeline_data: template.timeline_data || { elements: [], overlays: [], variablePools: {} },
-                exports_count: template.exports_count || 0,
-                updated_at: new Date().toISOString()
+                exports_count: template.exports_count || 0
             })
-            .select()
-            .single();
+        });
 
-        if (error) {
-            console.error('Error saving template:', error);
-            throw error;
+        const result = await response.json();
+        if (result.error) {
+            throw new Error(result.error);
         }
-        return data;
+        return result.data;
+    }
+
+    async function updateTemplate(template) {
+        const response = await fetch(`${window.API_BASE_URL}/api/templates/${template.id}/update/`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                device_id: deviceId,
+                name: template.name,
+                thumbnail: template.thumbnail,
+                timeline_data: template.timeline_data,
+                exports_count: template.exports_count
+            })
+        });
+
+        const result = await response.json();
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        return result.data;
     }
 
     async function deleteTemplateFromDB(id) {
-        const { error } = await supabase
-            .from('templates')
-            .delete()
-            .eq('id', id)
-            .eq('device_id', deviceId);
+        const response = await fetch(`${window.API_BASE_URL}/api/templates/${id}/delete/?device_id=${deviceId}`, {
+            method: 'DELETE'
+        });
 
-        if (error) {
-            console.error('Error deleting template:', error);
-            throw error;
+        const result = await response.json();
+        if (result.error) {
+            throw new Error(result.error);
         }
     }
 
@@ -252,7 +260,7 @@
             template.name = newName.trim();
             template.updated_at = new Date().toISOString();
             try {
-                await saveTemplate(template);
+                await updateTemplate(template);
                 renderTemplates();
                 closeAllModals();
                 showToast('Template renamed');
@@ -605,10 +613,7 @@
 
     async function init() {
         try {
-            if (!initSupabase()) {
-                showToast('Failed to connect to database');
-                return;
-            }
+            initApi();
             templates = await getAllTemplates();
             renderTemplates();
             setupEventListeners();

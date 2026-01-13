@@ -1,29 +1,28 @@
 import json
 import logging
+import uuid
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from .video_export_service import VideoExportService
 from .gemini_multi_stage_analyzer import GeminiMultiStageAnalyzer
+from .models import Template, MediaLibrary
 
 logger = logging.getLogger(__name__)
 
 
 def landing_page(request):
-    """Landing page view"""
     return render(request, 'core/landing.html')
 
 
 def creator_page(request):
-    """Video template creator interface"""
     return render(request, 'core/creator.html')
 
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def creator_export_video(request):
-    """Export video from creator timeline"""
     try:
         data = json.loads(request.body)
         timeline_data = data.get('timeline')
@@ -32,23 +31,19 @@ def creator_export_video(request):
         if not timeline_data:
             return JsonResponse({'error': 'timeline is required'}, status=400)
 
-        # Validate video count
-        video_count = min(max(1, video_count), 10)  # Limit between 1-10
+        video_count = min(max(1, video_count), 10)
 
         logger.info(f"Starting video export: {video_count} video(s)")
         logger.info(f"Timeline data: {timeline_data}")
 
-        # Log AI video and AI image elements specifically
         for i, element in enumerate(timeline_data.get('elements', [])):
             if element.get('type') == 'ai-video':
                 logger.info(f"AI Video element {i}: {element}")
             elif element.get('type') == 'ai-image':
                 logger.info(f"AI Image element {i}: {element}")
 
-        # Import and use video export service
         export_service = VideoExportService()
 
-        # Generate videos
         logger.info("Calling export_multiple_videos...")
         results = export_service.export_multiple_videos(timeline_data, video_count)
         logger.info(f"Export returned: {results}")
@@ -58,13 +53,12 @@ def creator_export_video(request):
 
         logger.info(f"Successfully generated {len(results)} video(s)")
 
-        # Extract video URLs for backward compatibility
         video_urls = [r['videoUrl'] for r in results]
 
         return JsonResponse({
             'success': True,
             'videos': video_urls,
-            'results': results,  # Include full results with AI content metadata
+            'results': results,
             'count': len(results)
         })
 
@@ -76,23 +70,19 @@ def creator_export_video(request):
 @csrf_exempt
 @require_http_methods(["POST"])
 def creator_import_video(request):
-    """Import video and generate timeline JSON using Gemini"""
     try:
-        # Get uploaded video file
         video_file = request.FILES.get('video')
 
         if not video_file:
             return JsonResponse({'error': 'video file is required'}, status=400)
 
-        # Validate file type
         allowed_types = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/mpeg', 'video/webm']
         if video_file.content_type not in allowed_types:
             return JsonResponse({
                 'error': f'Invalid file type: {video_file.content_type}. Allowed types: MP4, MOV, AVI, MPEG, WebM'
             }, status=400)
 
-        # Validate file size (max 100MB)
-        max_size = 100 * 1024 * 1024  # 100MB
+        max_size = 100 * 1024 * 1024
         if video_file.size > max_size:
             return JsonResponse({
                 'error': f'File too large: {video_file.size / (1024*1024):.1f}MB. Maximum allowed: 100MB'
@@ -100,7 +90,6 @@ def creator_import_video(request):
 
         logger.info(f"Processing video import: {video_file.name} ({video_file.size / (1024*1024):.1f}MB)")
 
-        # Use multi-stage analyzer
         logger.info("Using multi-stage analyzer (5 stages)")
         analyzer = GeminiMultiStageAnalyzer()
 
@@ -118,3 +107,221 @@ def creator_import_video(request):
         logger.error(f"Video import error: {str(e)}")
         return JsonResponse({'error': str(e)}, status=500)
 
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_templates(request):
+    device_id = request.GET.get('device_id')
+    if not device_id:
+        return JsonResponse({'error': 'device_id is required'}, status=400)
+
+    templates = Template.objects.filter(device_id=device_id).order_by('-updated_at')
+    data = [{
+        'id': str(t.id),
+        'device_id': t.device_id,
+        'name': t.name,
+        'thumbnail': t.thumbnail,
+        'timeline_data': t.timeline_data,
+        'exports_count': t.exports_count,
+        'created_at': t.created_at.isoformat(),
+        'updated_at': t.updated_at.isoformat()
+    } for t in templates]
+
+    return JsonResponse({'data': data})
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_template(request, template_id):
+    device_id = request.GET.get('device_id')
+    if not device_id:
+        return JsonResponse({'error': 'device_id is required'}, status=400)
+
+    try:
+        template = Template.objects.get(id=template_id, device_id=device_id)
+        return JsonResponse({
+            'data': {
+                'id': str(template.id),
+                'device_id': template.device_id,
+                'name': template.name,
+                'thumbnail': template.thumbnail,
+                'timeline_data': template.timeline_data,
+                'exports_count': template.exports_count,
+                'created_at': template.created_at.isoformat(),
+                'updated_at': template.updated_at.isoformat()
+            }
+        })
+    except Template.DoesNotExist:
+        return JsonResponse({'data': None})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_template(request):
+    try:
+        data = json.loads(request.body)
+        device_id = data.get('device_id')
+        if not device_id:
+            return JsonResponse({'error': 'device_id is required'}, status=400)
+
+        template_id = data.get('id')
+        if template_id:
+            try:
+                template_id = uuid.UUID(template_id)
+            except ValueError:
+                template_id = uuid.uuid4()
+        else:
+            template_id = uuid.uuid4()
+
+        template = Template.objects.create(
+            id=template_id,
+            device_id=device_id,
+            name=data.get('name', 'Untitled Template'),
+            thumbnail=data.get('thumbnail'),
+            timeline_data=data.get('timeline_data', {'elements': [], 'overlays': [], 'variablePools': {}}),
+            exports_count=data.get('exports_count', 0)
+        )
+
+        return JsonResponse({
+            'data': {
+                'id': str(template.id),
+                'device_id': template.device_id,
+                'name': template.name,
+                'thumbnail': template.thumbnail,
+                'timeline_data': template.timeline_data,
+                'exports_count': template.exports_count,
+                'created_at': template.created_at.isoformat(),
+                'updated_at': template.updated_at.isoformat()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Create template error: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["PUT"])
+def update_template(request, template_id):
+    try:
+        data = json.loads(request.body)
+        device_id = data.get('device_id')
+        if not device_id:
+            return JsonResponse({'error': 'device_id is required'}, status=400)
+
+        try:
+            template = Template.objects.get(id=template_id, device_id=device_id)
+        except Template.DoesNotExist:
+            return JsonResponse({'error': 'Template not found'}, status=404)
+
+        if 'name' in data:
+            template.name = data['name']
+        if 'thumbnail' in data:
+            template.thumbnail = data['thumbnail']
+        if 'timeline_data' in data:
+            template.timeline_data = data['timeline_data']
+        if 'exports_count' in data:
+            template.exports_count = data['exports_count']
+
+        template.save()
+
+        return JsonResponse({
+            'data': {
+                'id': str(template.id),
+                'device_id': template.device_id,
+                'name': template.name,
+                'thumbnail': template.thumbnail,
+                'timeline_data': template.timeline_data,
+                'exports_count': template.exports_count,
+                'created_at': template.created_at.isoformat(),
+                'updated_at': template.updated_at.isoformat()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Update template error: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_template(request, template_id):
+    device_id = request.GET.get('device_id')
+    if not device_id:
+        return JsonResponse({'error': 'device_id is required'}, status=400)
+
+    try:
+        template = Template.objects.get(id=template_id, device_id=device_id)
+        template.delete()
+        return JsonResponse({'success': True})
+    except Template.DoesNotExist:
+        return JsonResponse({'error': 'Template not found'}, status=404)
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def get_media_items(request):
+    device_id = request.GET.get('device_id')
+    if not device_id:
+        return JsonResponse({'error': 'device_id is required'}, status=400)
+
+    type_filter = request.GET.get('type')
+    queryset = MediaLibrary.objects.filter(device_id=device_id)
+
+    if type_filter and type_filter != 'all':
+        queryset = queryset.filter(type=type_filter)
+
+    data = [{
+        'id': str(m.id),
+        'device_id': m.device_id,
+        'name': m.name,
+        'type': m.type,
+        'files': m.files,
+        'created_at': m.created_at.isoformat()
+    } for m in queryset]
+
+    return JsonResponse({'data': data})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def create_media_item(request):
+    try:
+        data = json.loads(request.body)
+        device_id = data.get('device_id')
+        if not device_id:
+            return JsonResponse({'error': 'device_id is required'}, status=400)
+
+        media_item = MediaLibrary.objects.create(
+            device_id=device_id,
+            name=data.get('name', 'Untitled Pool'),
+            type=data.get('type', 'image_pool'),
+            files=data.get('files', [])
+        )
+
+        return JsonResponse({
+            'data': {
+                'id': str(media_item.id),
+                'device_id': media_item.device_id,
+                'name': media_item.name,
+                'type': media_item.type,
+                'files': media_item.files,
+                'created_at': media_item.created_at.isoformat()
+            }
+        })
+    except Exception as e:
+        logger.error(f"Create media item error: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_media_item(request, media_id):
+    device_id = request.GET.get('device_id')
+    if not device_id:
+        return JsonResponse({'error': 'device_id is required'}, status=400)
+
+    try:
+        media_item = MediaLibrary.objects.get(id=media_id, device_id=device_id)
+        media_item.delete()
+        return JsonResponse({'success': True})
+    except MediaLibrary.DoesNotExist:
+        return JsonResponse({'error': 'Media item not found'}, status=404)

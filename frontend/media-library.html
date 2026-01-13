@@ -7,8 +7,7 @@
     <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/dashboard.css">
     <script>
-        window.SUPABASE_URL = 'https://joivvptozcoyblqommsb.supabase.co';
-        window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpvaXZ2cHRvemNveWJscW9tbXNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgyNzYyNzIsImV4cCI6MjA4Mzg1MjI3Mn0.ki4km2fX6qC2pmN1B8cRHyRo8o4ccaMUk1-ZVDPMedQ';
+        window.API_BASE_URL = window.API_BASE_URL || '';
     </script>
     <style>
         .media-grid {
@@ -357,10 +356,8 @@
         <span class="toast-message" id="toastMessage"></span>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
     (function() {
-        let supabase = null;
         let mediaItems = [];
         let deviceId = null;
         let currentFilter = 'all';
@@ -375,67 +372,52 @@
             return id;
         }
 
-        function initSupabase() {
-            if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
-                console.error('Supabase configuration missing');
-                return false;
-            }
-            supabase = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+        function initApi() {
             deviceId = getDeviceId();
             return true;
         }
 
         async function loadMediaItems() {
-            let query = supabase
-                .from('media_library')
-                .select('*')
-                .eq('device_id', deviceId)
-                .order('created_at', { ascending: false });
+            const typeParam = currentFilter !== 'all' ? `&type=${currentFilter}` : '';
+            const response = await fetch(`${window.API_BASE_URL}/api/media/?device_id=${deviceId}${typeParam}`);
+            const result = await response.json();
 
-            if (currentFilter !== 'all') {
-                query = query.eq('type', currentFilter);
-            }
-
-            const { data, error } = await query;
-
-            if (error) {
-                console.error('Error loading media:', error);
+            if (result.error) {
+                console.error('Error loading media:', result.error);
                 return [];
             }
 
-            mediaItems = data || [];
+            mediaItems = result.data || [];
             return mediaItems;
         }
 
         async function saveMediaItem(item) {
-            const { data, error } = await supabase
-                .from('media_library')
-                .insert({
+            const response = await fetch(`${window.API_BASE_URL}/api/media/create/`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     device_id: deviceId,
                     name: item.name,
                     type: item.type,
                     files: item.files
                 })
-                .select()
-                .single();
+            });
 
-            if (error) {
-                console.error('Error saving media:', error);
-                throw error;
+            const result = await response.json();
+            if (result.error) {
+                throw new Error(result.error);
             }
-            return data;
+            return result.data;
         }
 
         async function deleteMediaItem(id) {
-            const { error } = await supabase
-                .from('media_library')
-                .delete()
-                .eq('id', id)
-                .eq('device_id', deviceId);
+            const response = await fetch(`${window.API_BASE_URL}/api/media/${id}/delete/?device_id=${deviceId}`, {
+                method: 'DELETE'
+            });
 
-            if (error) {
-                console.error('Error deleting media:', error);
-                throw error;
+            const result = await response.json();
+            if (result.error) {
+                throw new Error(result.error);
             }
         }
 
@@ -655,11 +637,7 @@
         }
 
         async function init() {
-            if (!initSupabase()) {
-                showToast('Failed to connect to database');
-                return;
-            }
-
+            initApi();
             await loadMediaItems();
             renderMedia();
             setupEventListeners();

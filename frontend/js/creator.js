@@ -4,8 +4,7 @@
         const PIXEL_PER_SECOND = 40; // 200px / 5 seconds = 40px per second
         const MAX_DURATION = 60;
 
-        // Supabase Configuration
-        let supabaseClient = null;
+        // API Configuration
         let currentTemplateId = null;
         let currentTemplate = null;
         let deviceId = null;
@@ -22,37 +21,34 @@
             return id;
         }
 
-        function initSupabase() {
-            if (!window.SUPABASE_URL || !window.SUPABASE_ANON_KEY) {
-                console.warn('Supabase configuration missing');
-                return false;
-            }
-            supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+        function initApi() {
             deviceId = getDeviceId();
             currentTemplateId = localStorage.getItem('currentTemplateId');
             return true;
         }
 
-        async function loadTemplateFromSupabase() {
-            if (!supabaseClient || !currentTemplateId) return null;
+        async function loadTemplateFromApi() {
+            if (!currentTemplateId || !deviceId) return null;
 
-            const { data, error } = await supabaseClient
-                .from('templates')
-                .select('*')
-                .eq('id', currentTemplateId)
-                .maybeSingle();
+            try {
+                const response = await fetch(`${window.API_BASE_URL}/api/templates/${currentTemplateId}/?device_id=${deviceId}`);
+                const result = await response.json();
 
-            if (error) {
+                if (result.error) {
+                    console.error('Error loading template:', result.error);
+                    return null;
+                }
+
+                currentTemplate = result.data;
+                return result.data;
+            } catch (error) {
                 console.error('Error loading template:', error);
                 return null;
             }
-
-            currentTemplate = data;
-            return data;
         }
 
-        async function saveTemplateToSupabase(showIndicator = true) {
-            if (!supabaseClient || !currentTemplateId || !deviceId) return;
+        async function saveTemplateToApi(showIndicator = true) {
+            if (!currentTemplateId || !deviceId) return;
             if (isSaving) return;
 
             isSaving = true;
@@ -68,18 +64,20 @@
                 const timelineData = await collectTimelineDataForSave();
                 const thumbnail = await generateTimelineThumbnail();
 
-                const { error } = await supabaseClient
-                    .from('templates')
-                    .update({
+                const response = await fetch(`${window.API_BASE_URL}/api/templates/${currentTemplateId}/update/`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        device_id: deviceId,
                         timeline_data: timelineData,
-                        thumbnail: thumbnail,
-                        updated_at: new Date().toISOString()
+                        thumbnail: thumbnail
                     })
-                    .eq('id', currentTemplateId)
-                    .eq('device_id', deviceId);
+                });
 
-                if (error) {
-                    console.error('Error saving template:', error);
+                const result = await response.json();
+
+                if (result.error) {
+                    console.error('Error saving template:', result.error);
                 } else if (showIndicator && saveIndicator) {
                     saveIndicator.querySelector('.save-indicator-text').textContent = 'Saved';
                     saveIndicator.classList.remove('saving');
@@ -100,7 +98,7 @@
                 clearTimeout(autoSaveTimeout);
             }
             autoSaveTimeout = setTimeout(() => {
-                saveTemplateToSupabase();
+                saveTemplateToApi();
             }, AUTO_SAVE_DELAY);
         }
 
@@ -6967,13 +6965,13 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
-            // Initialize Supabase
-            initSupabase();
+            // Initialize API
+            initApi();
 
-            // Load template from Supabase if we have a template ID
+            // Load template from API if we have a template ID
             if (currentTemplateId) {
                 try {
-                    const template = await loadTemplateFromSupabase();
+                    const template = await loadTemplateFromApi();
                     if (template && template.timeline_data) {
                         console.log('Template loaded:', template.name);
                         await applyTemplateToTimeline(template.timeline_data);
